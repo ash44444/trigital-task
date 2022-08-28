@@ -2,13 +2,14 @@ const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const autoIncrement = require("mongoose-auto-increment");
 
 const port = 4000;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-mongoose.connect(
+let connection = mongoose.createConnection(
   "mongodb://localhost:27017/admin",
   {
     useNewUrlParser: true,
@@ -18,25 +19,35 @@ mongoose.connect(
     console.log("DB connected");
   }
 );
+autoIncrement.initialize(connection);
 
 const userSchema = new mongoose.Schema({
   name: String,
   phone: String,
   day: String,
   date: String,
+  userId: Number,
 });
 
-const User = new mongoose.model("User", userSchema);
+userSchema.plugin(autoIncrement.plugin, {
+  model: "User",
+  field: "userId",
+  startAt: 10,
+  incrementBy: 1,
+});
 
-//create user in database
+var User = connection.model("User", userSchema);
+
+//create user in database with autoIncrement Id
 app.post("/register", (req, res) => {
-  const { name, phone, day, date } = req.body;
+  const { name, phone, day, date, userId } = req.body;
 
   let user = new User({
     name,
     phone,
     day,
     date,
+    userId,
   });
   user.save((err) => {
     if (err) {
